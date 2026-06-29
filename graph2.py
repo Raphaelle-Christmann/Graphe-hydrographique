@@ -35,7 +35,10 @@ Seine_Code = "03C00000020008"
 Root_Name = "Balise fond"
 
 bbox = box(490000, 6658000, 861000, 6981000)
-gdf = gpd.read_file('../gis/TronconHydrographique_FXX.shp', bbox=bbox).set_index("CdOH")
+gdf = gpd.read_file(
+    "TronconHydrographique_FXX-shp/TronconHydrographique_FXX.shp",
+    bbox=bbox,
+).set_index("CdOH")
 
 patch = {
     "03T0000002287758528": {"TopoOH": "la Marne", "CdCoursEau": "03C0000002000815787"},
@@ -53,10 +56,7 @@ seine
 seine['CdCoursEau'].dropna()
 
 # %%
-crs = pyproj.crs.CRS('EPSG:2154')
-sites = pd.read_csv(TEMP_DATA / "Tab-Sites.csv", dtype={'Code': 'str'})
-geom = gpd.GeoSeries.from_xy(sites['XLAMB93'], sites['YLAMB93'], crs=crs)
-sites = gpd.GeoDataFrame(sites, geometry=geom)
+sites = gpd.read_file("Sites/Sites.shp").to_crs("EPSG:2154")
 sites
 
 # %%
