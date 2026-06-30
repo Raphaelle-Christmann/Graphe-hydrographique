@@ -154,7 +154,7 @@ def contract(g):
     ug = g.to_undirected() if g.is_directed() else g
 
     # Créer le sous-graphe des nœuds de degré 2
-    is_chain = [node for node, degree in ug.degree() if degree == 2]
+    is_chain = [node for node, degree in ug.degree() if ((degree == 2) and (G.nodes[node].get("site_id") is None))]
     chains = ug.subgraph(is_chain)
 
     # Correction : connected_component_subgraphs supprimé en NX 2.4+
