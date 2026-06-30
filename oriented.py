@@ -27,7 +27,26 @@ import networkx as nx
 from shapely import Point, LineString, MultiLineString, GeometryCollection, box
 from shapely.ops import split, snap, linemerge
 from tqdm.auto import tqdm
+from collections import deque
+"""
+def oriente(graph, node):
 
+    visited = []
+    stack = deque()
+    stack.append((node,0.))
+
+    while stack:
+        (node,d) = stack.pop()
+        if node not in visited:
+            visited.append(node)
+            unvisited = []
+            for v in graph[node] :
+              if graph.nodes[node].get["site_id"] is not None :
+               OG.
+            stack.extend(unvisited)
+
+    return visited
+"""
 TEMP_DATA = pathlib.Path("Temper_Data")
 
 # %%
@@ -86,6 +105,14 @@ seine3
 G = pickle.load(open('graph.pickle', 'rb'))
 Gc = pickle.load(open('contract.pickle', 'rb'))
 
+
+OG = nx.DiGraph()
+
+for (u,v) in Gc.edges :
+  OG.add_edge(u,v)
+
+
+
 # %%
 root_node = sites2.loc[sites2["Libellé"] == Root_Name, "geometry"]
 root_node = root_node.squeeze().coords[0]
@@ -97,6 +124,7 @@ for site in sites2.itertuples():
     attrs["site_id"] = site.Index
     attrs["label"] = site.Libellé
     site_nodes.append(coord)
+
 
 '''
 fig, ax = plt.subplots(figsize=(12, 12))
