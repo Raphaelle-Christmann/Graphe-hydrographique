@@ -108,8 +108,10 @@ Gc = pickle.load(open('contract.pickle', 'rb'))
 
 OG = nx.DiGraph()
 
-for (u,v) in Gc.edges :
+for (u,v) in G.edges :
   OG.add_edge(u,v)
+
+pickle.dump(OG, open('oriented_graph.pickle', 'wb'))
 
 
 

@@ -23,10 +23,11 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pyproj
 import networkx as nx
+import pickle
 from shapely import Point, LineString, MultiLineString, GeometryCollection, box
 from shapely.ops import split, snap, linemerge
 from tqdm.auto import tqdm
-
+from contracter import contract
 TEMP_DATA = pathlib.Path("Temper_Data")
 
 # Chargement des tronçons hydrographiques pour une zone (bbox) couvrant
@@ -128,3 +129,8 @@ for site in site_nodes:
     else:
         print(f"Aucun chemin trouvé vers {attrs['label']}")
         colors.append("red")
+
+G_contract = contract(G)
+
+pickle.dump(G, open('graph.pickle', 'wb'))
+pickle.dump(G_contract, open('contract.pickle', 'wb'))

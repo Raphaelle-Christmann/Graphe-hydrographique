@@ -4,27 +4,26 @@ import networkx as nx
 import pickle
 from contracter import contract
 
-G = pickle.load(open('graph.pickle', 'rb'))
-G_contract = pickle.load(open('contract.pickle', 'rb'))
+OG = pickle.load(open('oriented_graph.pickle', 'rb'))
 
 # %%
 # Affichage avec les positions géographiques réelles (centroïdes des tronçons)
-# On ne garde que les positions des nœuds présents dans G_contract
-pos_contract = {n: n for n in G_contract.nodes()}
+# On ne garde que les positions des nœuds présents dans OG
+pos_contract = {n: n for n in OG.nodes()}
 
 # Couleur différente pour les nœuds correspondant à des stations (sites)
 node_colors = [
-    "tab:orange" if G_contract.nodes[n].get("site_id") is not None else "tab:red"
-    for n in G_contract.nodes()
+    "tab:orange" if OG.nodes[n].get("site_id") is not None else "tab:red"
+    for n in OG.nodes()
 ]
 node_sizes = [
-    40 if G_contract.nodes[n].get("site_id") is not None else 5
-    for n in G_contract.nodes()
+    40 if OG.nodes[n].get("site_id") is not None else 5
+    for n in OG.nodes()
 ]
 
 fig, ax = plt.subplots(figsize=(12, 12))
 nx.draw(
-    G_contract,
+    OG,
     pos=pos_contract,
     ax=ax,
     node_color=node_colors,

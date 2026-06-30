@@ -151,8 +151,11 @@ plt.show()
 cntr = gdf.centroid
 pos = dict(zip(cntr.index, np.array([cntr.x, cntr.y]).T.tolist()))
 
-m = gdf[["CdNoeudDeb", "CdNoeudFin"]].notna().all(axis=1)
-H = nx.from_pandas_edgelist(gdf[m].assign(length=gdf[m].length), source="CdNoeudDeb", target="CdNoeudFin", edge_attr=["length"])
+m = seine3[["CdNoeudDeb", "CdNoeudFin"]].notna().all(axis=1)
+H_seine = nx.from_pandas_edgelist(
+seine3[m].assign(length=seine3[m].length),
+source="CdNoeudDeb", target="CdNoeudFin", edge_attr=["length"]
+)
 
 
 def contract(g):
@@ -202,18 +205,34 @@ def contract(g):
 # Contraction
 G_contract = contract(G)
 
-'''
+pos_contract = {n: n for n in G_contract.nodes()}
 
-# Plot
-pos = nx.spring_layout(G_contract) 
+# Couleur différente pour les nœuds correspondant à des stations (sites)
+node_colors = [
+    "tab:orange" if G_contract.nodes[n].get("site_id") is not None else "tab:red"
+    for n in G_contract.nodes()
+]
+node_sizes = [
+    40 if G_contract.nodes[n].get("site_id") is not None else 5
+    for n in G_contract.nodes()
+]
 
-fig, (ax1, ax2) = plt.subplots(1, 2, sharex=True, sharey=True)
-nx.draw(G_contract, pos=pos, ax=ax1)
-nx.draw(G_contract, pos={n: pos[n] for n in G_contract.nodes() if n in pos}, ax=ax2)
-
+fig, ax = plt.subplots(figsize=(12, 12))
+nx.draw(
+    G_contract,
+    pos=pos_contract,
+    ax=ax,
+    node_color=node_colors,
+    node_size=node_sizes,
+    edge_color="tab:blue",
+    width=0.5,
+    with_labels=False,
+)
+ax.set_aspect("equal")
 plt.show()
-'''
 
-print(len(G_contract.nodes()), len(G_contract.edges()),len(G.nodes()), len(G.edges()))
+seine3.to_file("seine3.shp")
+
+'''print(len(G_contract.nodes()), len(G_contract.edges()),len(G.nodes()), len(G.edges()))'''
 pickle.dump(G, open('graph.pickle', 'wb'))
-pickle.dump(Gc, open('contract.pickle', 'wb'))
+pickle.dump(G_contract, open('contract.pickle', 'wb'))
