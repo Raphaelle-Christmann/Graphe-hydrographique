@@ -15,6 +15,7 @@
 
 # %%
 import pathlib
+import pickle
 import pandas as pd
 import geopandas as gpd
 import numpy as np
@@ -25,6 +26,7 @@ import pyproj
 import networkx as nx
 from shapely import Point, LineString, MultiLineString, GeometryCollection, box
 from shapely.ops import split, snap, linemerge
+from contracter import contract
 from tqdm.auto import tqdm
 
 TEMP_DATA = pathlib.Path("Temper_Data")
@@ -96,6 +98,7 @@ seine3
 
 # %%
 G = nx.Graph()
+OG = nx.DiGraph()
 
 # chaque point de la LineString devient un nœud du graphe, chaque segment devient une arête avec un poids égal à sa longueur
 
@@ -103,6 +106,7 @@ for _, row in tqdm(seine3.iterrows(), total=len(seine3)):
     geom = row.geometry
     for i, j in zip(geom.coords, geom.coords[1:]):
         G.add_edge(i, j, weight=LineString([i, j]).length)
+        OG.add_edge(i, j, weight=LineString([i, j]).length)
 
 # %%
 root_node = sites2.loc[sites2["Libellé"] == Root_Name, "geometry"]
@@ -112,6 +116,9 @@ site_nodes = []
 for site in sites2.itertuples():
     coord = site.geometry.coords[0]  # Point
     attrs = G.nodes[coord]
+    attrs["site_id"] = site.Index
+    attrs["label"] = site.Libellé
+    attrs = OG.nodes[coord]
     attrs["site_id"] = site.Index
     attrs["label"] = site.Libellé
     site_nodes.append(coord)
@@ -128,3 +135,6 @@ for site in site_nodes:
     else:
         print(f"Aucun chemin trouvé vers {attrs['label']}")
         colors.append("red")
+pickle.dump(OG, open('ograph.pickle', 'wb'))
+OGc = contract(OG)
+pickle.dump(OGc, open('ocontract.pickle', 'wb'))

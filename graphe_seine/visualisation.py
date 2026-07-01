@@ -1,10 +1,10 @@
 # visualisation.py — a besoin de :
 import matplotlib.pyplot as plt
 import networkx as nx
-from graphe import G, paths
 from contracter import contract
+import pickle
 
-G_contract = contract(G)
+G_contract = pickle.load(open("ocontract.pickle",'rb'))
 # H_seine_contract = contract(H_seine)
 
 # %%
