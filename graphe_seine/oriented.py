@@ -42,6 +42,7 @@ def dfs(graph, node):
                 stack.append(next_node)
                 print(node)
                 dg.add_edge(node,next_node)
+                dg.nodes[node]["site_id"] = graph.nodes[node].get("site_id")
                 remove_from_stack = False
                 break
         if remove_from_stack:
