@@ -21,15 +21,19 @@ G_contract = pickle.load(open('contract.pickle', 'rb'))
 # On ne garde que les positions des nœuds présents dans G_contract
 pos_contract = {n: n for n in G_contract.nodes()}
 
-# Couleur différente pour les nœuds correspondant à des stations (sites)
-node_colors = [
-    "tab:orange" if G_contract.nodes[n].get("site_id") is not None else "tab:red"
-    for n in G_contract.nodes()
-]
-node_sizes = [
-    40 if G_contract.nodes[n].get("site_id") is not None else 5
-    for n in G_contract.nodes()
-]
+# Couleur différente pour les nœuds (sites en orange, hubeau en vert, autres en rouge)
+def get_color(n):
+    source = G_contract.nodes[n].get("source")
+    if source == "sites_existants":
+        return "tab:orange"
+    elif source == "hubeau":
+        return "tab:green"
+    else:
+        return "tab:red"
+
+node_colors = [get_color(n) for n in G_contract.nodes()]
+node_sizes = [40 if G_contract.nodes[n].get("site_id") is not None else 5 
+              for n in G_contract.nodes()]
 
 fig, ax = plt.subplots(figsize=(12, 12))
 nx.draw(
