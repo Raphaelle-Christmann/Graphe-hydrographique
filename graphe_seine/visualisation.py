@@ -1,11 +1,20 @@
 # visualisation.py — a besoin de :
 import matplotlib.pyplot as plt
 import networkx as nx
+<<<<<<< HEAD
+=======
 import pickle
+>>>>>>> refs/remotes/origin/main
 from contracter import contract
+import pickle
 
+<<<<<<< HEAD
+G_contract = pickle.load(open("ocontract.pickle",'rb'))
+# H_seine_contract = contract(H_seine)
+=======
 G = pickle.load(open('graph.pickle', 'rb'))
 G_contract = pickle.load(open('contract.pickle', 'rb'))
+>>>>>>> refs/remotes/origin/main
 
 # %%
 # Affichage avec les positions géographiques réelles (centroïdes des tronçons)

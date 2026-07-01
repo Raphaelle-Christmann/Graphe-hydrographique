@@ -2,9 +2,8 @@
 import matplotlib.pyplot as plt
 import networkx as nx
 import pickle
-from contracter import contract
 
-OG = pickle.load(open('oriented_graph.pickle', 'rb'))
+OG = pickle.load(open('ograph.pickle', 'rb'))
 
 # %%
 # Affichage avec les positions géographiques réelles (centroïdes des tronçons)
