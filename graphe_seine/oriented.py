@@ -44,7 +44,7 @@ def dfs(graph, node):
             if next_node not in visited:
                 dg.add_edge(node,next_node,weight = attrs['weight'])
                 dg.nodes[node]["site_id"] = graph.nodes[node].get("site_id")
-                dg.nodes[node]["dist_exut"] = d + attrs['weight']
+                dg.nodes[next_node]["dist_exut"] = d + attrs['weight']
                 stack.append((next_node,dg.nodes[node]["dist_exut"]))
                 remove_from_stack = False
                 break

@@ -2,7 +2,6 @@
 import matplotlib.pyplot as plt
 import networkx as nx
 import pickle
-from contracter import contract
 
 OG = pickle.load(open('ograph.pickle', 'rb'))
 
