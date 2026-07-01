@@ -1,20 +1,13 @@
 # visualisation.py — a besoin de :
 import matplotlib.pyplot as plt
 import networkx as nx
-<<<<<<< HEAD
-=======
-import pickle
->>>>>>> refs/remotes/origin/main
 from contracter import contract
 import pickle
+from matplotlib.lines import Line2D
 
-<<<<<<< HEAD
-G_contract = pickle.load(open("ocontract.pickle",'rb'))
-# H_seine_contract = contract(H_seine)
-=======
+
 G = pickle.load(open('graph.pickle', 'rb'))
 G_contract = pickle.load(open('contract.pickle', 'rb'))
->>>>>>> refs/remotes/origin/main
 
 # %%
 # Affichage avec les positions géographiques réelles (centroïdes des tronçons)
@@ -47,4 +40,12 @@ nx.draw(
     with_labels=False,
 )
 ax.set_aspect("equal")
+
+legend_elements = [
+    Line2D([0], [0], marker="o", color="w", markerfacecolor="tab:orange", markersize=8, label="Stations de relevé de température"),
+    Line2D([0], [0], marker="o", color="w", markerfacecolor="tab:green",   markersize=8, label="Stations de relevé de débit"),
+    Line2D([0], [0], marker="o", color="w", markerfacecolor="tab:red",    markersize=4, label="Nœuds réseau"),
+]
+ax.legend(handles=legend_elements, loc="upper left")
+
 plt.show()
