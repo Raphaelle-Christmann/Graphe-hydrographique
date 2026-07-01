@@ -31,18 +31,21 @@ from tqdm.auto import tqdm
 def dfs(graph, node):
     visited = set((node,))
     dg = nx.DiGraph()
-    stack = [node]
+    stack = [(node,0.)]
+    dg.add_node(node)
+    dg.nodes[node]["site_id"]=graph.nodes[node]["site_id"]
+    dg.nodes[node]["dist_exut"] = 0.
     while stack:
-        node = stack[-1]
+        node,d = stack[-1]
         if node not in visited:
             visited.add(node)
         remove_from_stack = True
-        for next_node in graph[node]:
+        for next_node,attrs in graph[node].items():
             if next_node not in visited:
-                stack.append(next_node)
-                print(node)
-                dg.add_edge(node,next_node)
+                dg.add_edge(node,next_node,weight = attrs['weight'])
                 dg.nodes[node]["site_id"] = graph.nodes[node].get("site_id")
+                dg.nodes[node]["dist_exut"] = d + attrs['weight']
+                stack.append((next_node,dg.nodes[node]["dist_exut"]))
                 remove_from_stack = False
                 break
         if remove_from_stack:
