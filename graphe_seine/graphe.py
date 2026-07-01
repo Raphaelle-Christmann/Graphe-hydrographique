@@ -15,6 +15,7 @@
 
 # %%
 import pathlib
+import requests
 import pandas as pd
 import geopandas as gpd
 import numpy as np
@@ -26,8 +27,10 @@ import networkx as nx
 import pickle
 from shapely import Point, LineString, MultiLineString, GeometryCollection, box
 from shapely.ops import split, snap, linemerge
+from scipy.spatial import cKDTree
 from tqdm.auto import tqdm
 from contracter import contract
+
 TEMP_DATA = pathlib.Path("Temper_Data")
 
 # Chargement des tronçons hydrographiques pour une zone (bbox) couvrant
@@ -49,7 +52,7 @@ patch = {
     "03T0000002287758537": {"TopoOH": "la Marne", "CdCoursEau": "03C0000002000815787"},
 }
 
-gdf.update(pd.DataFrame.from_dict(patch, orient="index")) # on applique les corrections sur le GeoDataFrame
+gdf.update(pd.DataFrame.from_dict(patch, orient="index"))  # on applique les corrections sur le GeoDataFrame
 
 # Filtrage : on ne garde que les tronçons dont le CdCoursEau commence par
 # le code du bassin de la Seine, et on force les géométries en 2D (suppression Z)
@@ -67,40 +70,132 @@ seine['CdCoursEau'].dropna()
 sites = gpd.read_file("Sites/Sites.shp").to_crs("EPSG:2154")
 sites
 
-# Rattachement de chaque site au réseau hydrographique : pour chaque site, on cherche le tronçon le plus proche,
-# on projette le point du site sur ce tronçon, puis on découpe le tronçon
-# au point projeté pour insérer le site comme un nœud du réseau
+# %%
+# Chargement des stations hydrométriques Hubeau pour "La Seine" uniquement
 
-sites2 = sites[~sites.is_empty]
+url_stations = "https://hubeau.eaufrance.fr/api/v2/hydrometrie/referentiel/stations"
+params_stations = {"format": "geojson", "size": 10000}
+
+gj = requests.get(url_stations, params=params_stations, timeout=60).json()
+gdf_hubeau = gpd.GeoDataFrame.from_features(gj["features"], crs="EPSG:4326")
+
+# Filtre sur le libellé du cours d'eau : uniquement "La Seine"
+gdf_hubeau = gdf_hubeau[gdf_hubeau["libelle_cours_eau"] == "La Seine"].copy()
+
+# Reprojection en Lambert-93, clip à la bbox, dédoublonnage
+gdf_hubeau = gdf_hubeau.to_crs("EPSG:2154")
+gdf_hubeau = gdf_hubeau.clip(bbox)
+gdf_hubeau = gdf_hubeau.drop_duplicates(subset="code_station")
+gdf_hubeau = gdf_hubeau.rename(columns={"libelle_station": "Libellé"})
+gdf_hubeau["source"] = "hubeau"
+
+sites_hubeau = gdf_hubeau[["Libellé", "geometry", "source"]].reset_index(drop=True).copy()
+print(f"{len(sites_hubeau)} stations Hubeau retenues sur La Seine")
+
+# %%
+# Rattachement des sites existants ET des stations Hubeau au réseau
+# hydrographique, en un seul traitement unifié : pour chaque point,
+# on cherche le tronçon le plus proche, on projette le point dessus,
+# puis on découpe le tronçon. La coordonnée exacte insérée dans le
+# tronçon est systématiquement récupérée (pour sites ET stations),
+# afin d'éviter toute dérive de précision flottante entre les deux
+# passes (snap/split/linemerge n'étant pas garantis stables bit-à-bit
+# lorsqu'un même tronçon est retouché plusieurs fois).
+
+sites2 = sites[~sites.is_empty].reset_index(drop=True).copy()
+sites2["source"] = "sites_existants"
+
+station_hydro = sites_hubeau[~sites_hubeau.is_empty].reset_index(drop=True).copy()
+# station_hydro possède déjà une colonne "source" = "hubeau"
+
 seine2 = seine.explode(ignore_index=True)
+geom_col_s2 = seine2.columns.get_loc("geometry")
 
-pos1, pos2 = seine2.sindex.nearest(sites2["geometry"], return_all=False)
+# Fusion sites + stations dans une seule collection, avec traçabilité
+# de l'origine ("kind") et de l'index d'origine (pour retrouver site_id ensuite)
+points = pd.concat(
+    [
+        sites2[["Libellé", "geometry", "source"]]
+            .assign(orig_index=sites2.index, kind="sites_existants"),
+        station_hydro[["Libellé", "geometry", "source"]]
+            .assign(orig_index=station_hydro.index, kind="hubeau"),
+    ],
+    ignore_index=True,
+)
+points = gpd.GeoDataFrame(points, geometry="geometry", crs=seine2.crs)
+geom_col_p = points.columns.get_loc("geometry")
 
-for idx1, idx2 in zip(sites2.index[pos1], seine2.index[pos2]):
-    pt = sites.loc[idx1, "geometry"]
-    ls = seine2.loc[idx2, "geometry"]
+# Recherche du tronçon le plus proche pour CHAQUE point (une seule fois,
+# sur l'état initial de seine2)
+pos1, pos2 = seine2.sindex.nearest(points["geometry"], return_all=False)
 
-    proj_pt = ls.interpolate(ls.project(pt)) # projection du site sur la ligne
-    snap_ls = snap(ls, proj_pt, 1e-6) # on "accroche" la ligne au point projeté
-    split_ls = split(snap_ls, proj_pt) # on découpe la ligne au point projeté
-    split_ls = linemerge(split_ls) 
+topo_touched = []  # TopoOH des tronçons ayant reçu au moins un point
 
-    sites2.loc[idx1, "geometry"] = proj_pt # le site prend la position du point projeté
-    seine2.loc[idx2, "geometry"] = split_ls # le tronçon est remplacé par la ligne découpée
+for i1, i2 in zip(pos1, pos2):
+    pt = points.iloc[i1, geom_col_p]
+    ls = seine2.iloc[i2, geom_col_s2]
+
+    proj_pt = ls.interpolate(ls.project(pt))   # projection du point sur la ligne
+    snap_ls = snap(ls, proj_pt, 1e-6)          # on "accroche" la ligne au point projeté
+    split_ls = split(snap_ls, proj_pt)         # on découpe la ligne au point projeté
+    split_ls = linemerge(split_ls)
+
+    # Récupération de la coordonnée EXACTE insérée dans split_ls
+    # (appliqué systématiquement à TOUS les points, sites ET stations)
+    if hasattr(split_ls, "geoms"):
+        coords_array = np.array([c for geom in split_ls.geoms for c in geom.coords])
+    else:
+        coords_array = np.array(split_ls.coords)
+    dists = np.linalg.norm(coords_array - np.array(proj_pt.coords[0]), axis=1)
+    exact_coord = Point(coords_array[np.argmin(dists)])
+
+    points.iloc[i1, geom_col_p] = exact_coord
+    seine2.iloc[i2, geom_col_s2] = split_ls
+
+    topo_touched.append(seine2.iloc[i2]["TopoOH"])
 
 # On ne garde que les tronçons appartenant aux mêmes cours d'eau (TopoOH)
-# que ceux ayant reçu un site
-
-topo = seine2.loc[seine2.index[pos2], "TopoOH"].drop_duplicates().to_list()
+# que ceux ayant reçu au moins un point (site existant ou station Hubeau)
+topo = pd.Series(topo_touched).dropna().drop_duplicates().to_list()
 seine3 = seine2[seine2["TopoOH"].isin(topo)]
+
+# Correction finale de précision : plusieurs points peuvent tomber sur un
+# même tronçon d'origine. Lorsqu'un tronçon est splitté/linemerge plusieurs
+# fois de suite (un point après l'autre), le vertex du premier point inséré
+# peut subir une micro-dérive flottante lors du traitement du point suivant.
+# Pour éliminer tout risque de KeyError plus tard (G.nodes[coord]), on aligne
+# ici chaque point sur le vertex RÉELLEMENT présent dans seine3 (celui qui
+# servira à construire G) le plus proche.
+
+all_vertices = np.array(
+    [coord for geom in seine3.geometry for coord in geom.coords]
+)
+tree = cKDTree(all_vertices)
+
+pts_array = np.array([(p.x, p.y) for p in points.geometry])
+_, nearest_idx = tree.query(pts_array)
+points["geometry"] = [Point(all_vertices[i]) for i in nearest_idx]
+
+# On resépare sites2 / station_hydro à partir de "points", avec les
+# coordonnées corrigées, en retrouvant l'index d'origine (pour site_id)
+sites2 = (
+    points[points["kind"] == "sites_existants"]
+    .set_index("orig_index")[["Libellé", "geometry", "source"]]
+)
+station_hydro = (
+    points[points["kind"] == "hubeau"]
+    .set_index("orig_index")[["Libellé", "geometry", "source"]]
+)
+
 seine3
 
 # %%
 G = nx.Graph()
 
-# chaque point de la LineString devient un nœud du graphe, chaque segment devient une arête avec un poids égal à sa longueur
+# chaque point de la LineString devient un nœud du graphe,
+# chaque segment devient une arête avec un poids égal à sa longueur
 
-for _, row in tqdm(seine3.iterrows(), total=len(seine3)): 
+for _, row in tqdm(seine3.iterrows(), total=len(seine3)):
     geom = row.geometry
     for i, j in zip(geom.coords, geom.coords[1:]):
         G.add_edge(i, j, weight=LineString([i, j]).length)
@@ -110,14 +205,29 @@ root_node = sites2.loc[sites2["Libellé"] == Root_Name, "geometry"]
 root_node = root_node.squeeze().coords[0]
 
 site_nodes = []
+
+# Ajout des sites existants comme nœuds du graphe
 for site in sites2.itertuples():
-    coord = site.geometry.coords[0]  # Point
+    coord = site.geometry.coords[0]
     attrs = G.nodes[coord]
     attrs["site_id"] = site.Index
     attrs["label"] = site.Libellé
+    attrs["source"] = "sites_existants"
+    site_nodes.append(coord)
+
+# Ajout des stations Hubeau comme nœuds du graphe
+# (coord exacte garantie par la correction unifiée lors du rattachement)
+for station in station_hydro.itertuples():
+    coord = station.geometry.coords[0]
+    attrs = G.nodes[coord]
+    attrs["site_id"] = station.Index
+    attrs["label"] = station.Libellé
+    attrs["source"] = "hubeau"
     site_nodes.append(coord)
 
 # %%
+site_nodes
+
 colors = []
 paths = {}
 for site in site_nodes:
