@@ -40,6 +40,7 @@ def dfs(graph, node):
         for next_node in graph[node]:
             if next_node not in visited:
                 stack.append(next_node)
+                print(node)
                 dg.add_edge(node,next_node)
                 remove_from_stack = False
                 break
@@ -115,7 +116,8 @@ Gc = pickle.load(open('contract.pickle', 'rb'))
 root_node = sites2.loc[sites2["Libellé"] == Root_Name, "geometry"]
 root_node = root_node.squeeze().coords[0]
 
-OG = dfs(Gc,list(Gc.nodes)[0])
+OG = dfs(Gc,root_node)
+pickle.dump(OG, open('ograph.pickle', 'wb'))
 
 site_nodes = []
 for site in sites2.itertuples():
