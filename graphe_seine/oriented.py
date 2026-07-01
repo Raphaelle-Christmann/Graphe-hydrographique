@@ -65,8 +65,7 @@ sites = gpd.read_file("Sites/Sites.shp").to_crs("EPSG:2154")
 sites2 = sites[~sites.is_empty]
 
 # %%
-G = pickle.load(open('graph.pickle', 'rb'))
-Gc = pickle.load(open('contract.pickle', 'rb'))
+Gc = pickle.load(open('../Graphs/G_connexe_contracted.pickle', 'rb'))
 
 root_node = sites2.loc[sites2["Libellé"] == Root_Name, "geometry"]
 root_node = root_node.squeeze().coords[0]
