@@ -5,7 +5,7 @@ import networkx as nx
 import pickle
 
 OG = pickle.load(open('ograph.pickle', 'rb'))
-# Récupération des valeurs de dist_exut pour chaque nœud
+# Récupération des valeurs de dist_exut pour chacun des nœuds
 dist_exut_values = [OG.nodes[n].get("dist_exut",0.) for n in OG.nodes()]
 
 pos_contract = {n: n for n in OG.nodes()}
@@ -20,7 +20,6 @@ node_sizes = [
     40 if OG.nodes[n].get("site_id") is not None else 0
     for n in OG.nodes()
 ]
-
 fig, ax = plt.subplots(figsize=(12, 12))
 nx.draw(
     OG,
