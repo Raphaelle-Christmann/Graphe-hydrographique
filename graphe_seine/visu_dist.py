@@ -20,7 +20,6 @@ node_sizes = [
     40 if OG.nodes[n].get("site_id") is not None else 0
     for n in OG.nodes()
 ]
-
 fig, ax = plt.subplots(figsize=(12, 12))
 nx.draw(
     OG,
