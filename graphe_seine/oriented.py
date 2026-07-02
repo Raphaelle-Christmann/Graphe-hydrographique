@@ -31,25 +31,23 @@ from tqdm.auto import tqdm
 def dfs(graph, node):
     visited = set((node,))
     dg = nx.DiGraph()
-    stack = [(node,0.)]
+    stack = [(node,0.,node)]
     dg.add_node(node)
     dg.nodes[node]["site_id"]=graph.nodes[node]["site_id"]
     dg.nodes[node]["dist_exut"] = 0.
     while stack:
-        node,d = stack[-1]
+        node,d,parent = stack.pop()
         if node not in visited:
             visited.add(node)
-        remove_from_stack = True
         for next_node,attrs in graph[node].items():
             if next_node not in visited:
-                dg.add_edge(next_node,node,weight = attrs['weight'])
-                dg.nodes[node]["site_id"] = graph.nodes[node].get("site_id")
-                dg.nodes[next_node]["dist_exut"] = d + attrs['weight']
-                stack.append((next_node,dg.nodes[node]["dist_exut"]))
-                remove_from_stack = False
-                break
-        if remove_from_stack:
-            stack.pop()
+                if graph.nodes[next_node].get("site_id") is not None :
+                    dg.add_edge(next_node,parent,weight = d + attrs["weight"])
+                    dg.nodes[next_node]["site_id"] = graph.nodes[next_node].get("site_id")
+                    dg.nodes[next_node]["dist_exut"] = d + dg.nodes[parent].get("dist_exut")
+                    stack.append((next_node,0.,next_node))
+                else :
+                    stack.append((next_node,d+attrs["weight"],parent))
     return dg
 
 
