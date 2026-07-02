@@ -49,6 +49,7 @@ def dfs(graph, node):
     dg.add_node(node)
     dg.nodes[node]["site_id"]=graph.nodes[node].get("site_id")
     dg.nodes[node]["source"]=graph.nodes[node].get("source")
+    dg.nodes[node]["libelle_cours_eau"]=graph.nodes[node].get("libelle_cours_eau")
     dg.nodes[node]["dist_exut"] = 0.
     while stack:
         node,d = stack[-1]
@@ -60,6 +61,7 @@ def dfs(graph, node):
                 dg.add_edge(next_node,node,weight = attrs['weight'])
                 dg.nodes[next_node]["site_id"] = graph.nodes[next_node].get("site_id")
                 dg.nodes[next_node]["source"] = graph.nodes[next_node].get("source")
+                dg.nodes[next_node]["libelle_cours_eau"] = graph.nodes[next_node].get("libelle_cours_eau")
                 dg.nodes[next_node]["dist_exut"] = d + attrs['weight']
                 stack.append((next_node,dg.nodes[node]["dist_exut"]))
                 remove_from_stack = False

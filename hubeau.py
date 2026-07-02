@@ -17,6 +17,7 @@ gdf_hubeau = gdf_hubeau.drop_duplicates(subset="code_station")
 gdf_hubeau = gdf_hubeau.rename(columns={"libelle_station": "Libellé"})
 gdf_hubeau["source"] = "hubeau"
 
-sites_hubeau = gdf_hubeau[["Libellé", "geometry", "source"]].reset_index(drop=True).copy()
+sites_hubeau = gdf_hubeau[["Libellé", "geometry", "source","libelle_cours_eau"]].reset_index(drop=True).copy()
 print(f"{len(sites_hubeau)} stations Hubeau retenues sur La Seine")
+
 
