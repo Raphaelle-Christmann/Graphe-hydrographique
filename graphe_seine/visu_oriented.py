@@ -10,7 +10,7 @@ OG = pickle.load(open('ograph.pickle', 'rb'))
 # On ne garde que les positions des nœuds présents dans OG
 pos_contract = {n: n for n in OG.nodes()}
 
-# Couleur différente pour les nœuds correspondant à des stations
+# Couleur différente pour les nœuds correspondant à des stations (sites)
 node_colors = [
     "tab:blue" if OG.nodes[n].get("libelle_cours_eau")=="La Seine"
     else "tab:orange" if OG.nodes[n].get("libelle_cours_eau")=="L'Yonne"
