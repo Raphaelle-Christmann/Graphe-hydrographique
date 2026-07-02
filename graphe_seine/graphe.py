@@ -27,11 +27,24 @@ import networkx as nx
 import pickle
 from shapely import Point, LineString, MultiLineString, GeometryCollection, box
 from shapely.ops import split, snap, linemerge
-from scipy.spatial import cKDTree
 from tqdm.auto import tqdm
 from contracter import contract
 
 TEMP_DATA = pathlib.Path("Temper_Data")
+
+
+def snap_key(coord, ndigits=6):
+    """
+    Arrondit une coordonnée (x, y) à `ndigits` décimales, pour l'utiliser
+    comme clé de nœud stable dans le graphe. En Lambert-93 (EPSG:2154),
+    les coordonnées sont exprimées en mètres : 6 décimales correspond donc
+    à une précision de l'ordre du micromètre, largement suffisante pour
+    absorber les micro-dérives flottantes introduites par des opérations
+    géométriques successives (snap/split/linemerge) sans jamais confondre
+    deux vertices réellement distincts.
+    """
+    return (round(coord[0], ndigits), round(coord[1], ndigits))
+
 
 # Chargement des tronçons hydrographiques pour une zone (bbox) couvrant
 # approximativement le bassin de la Seine, indexés par CdOH (id du tronçon)
@@ -80,7 +93,8 @@ gj = requests.get(url_stations, params=params_stations, timeout=60).json()
 gdf_hubeau = gpd.GeoDataFrame.from_features(gj["features"], crs="EPSG:4326")
 
 # Filtre sur le libellé du cours d'eau : uniquement "La Seine"
-gdf_hubeau = gdf_hubeau[gdf_hubeau["libelle_cours_eau"] == "La Seine"].copy()
+cours_eau_retenus = ["La Seine", "L'Yonne", "La Marne", "L'Oise"]
+gdf_hubeau = gdf_hubeau[gdf_hubeau["libelle_cours_eau"].isin(cours_eau_retenus)].copy()
 
 # Reprojection en Lambert-93, clip à la bbox, dédoublonnage
 gdf_hubeau = gdf_hubeau.to_crs("EPSG:2154")
@@ -90,7 +104,7 @@ gdf_hubeau = gdf_hubeau.rename(columns={"libelle_station": "Libellé"})
 gdf_hubeau["source"] = "hubeau"
 
 sites_hubeau = gdf_hubeau[["Libellé", "geometry", "source"]].reset_index(drop=True).copy()
-print(f"{len(sites_hubeau)} stations Hubeau retenues sur La Seine")
+print(f"{len(sites_hubeau)} stations Hubeau retenues sur la Seine, l'Yonne, la Marne et l'Oise")
 
 # %%
 # Rattachement des sites existants ET des stations Hubeau au réseau
@@ -163,21 +177,11 @@ seine3 = seine2[seine2["TopoOH"].isin(topo)]
 # même tronçon d'origine. Lorsqu'un tronçon est splitté/linemerge plusieurs
 # fois de suite (un point après l'autre), le vertex du premier point inséré
 # peut subir une micro-dérive flottante lors du traitement du point suivant.
-# Pour éliminer tout risque de KeyError plus tard (G.nodes[coord]), on aligne
-# ici chaque point sur le vertex RÉELLEMENT présent dans seine3 (celui qui
-# servira à construire G) le plus proche.
+# Plutôt que de rechercher le vertex le plus proche, on normalise toutes les
+# coordonnées utilisées comme clés de nœud via snap_key() : cette dérive est
+# de l'ordre de 1e-9 à 1e-12, largement absorbée par l'arrondi à 6 décimales.
 
-all_vertices = np.array(
-    [coord for geom in seine3.geometry for coord in geom.coords]
-)
-tree = cKDTree(all_vertices)
-
-pts_array = np.array([(p.x, p.y) for p in points.geometry])
-_, nearest_idx = tree.query(pts_array)
-points["geometry"] = [Point(all_vertices[i]) for i in nearest_idx]
-
-# On resépare sites2 / station_hydro à partir de "points", avec les
-# coordonnées corrigées, en retrouvant l'index d'origine (pour site_id)
+# On resépare sites2 / station_hydro à partir de "points"
 sites2 = (
     points[points["kind"] == "sites_existants"]
     .set_index("orig_index")[["Libellé", "geometry", "source"]]
@@ -198,17 +202,18 @@ G = nx.Graph()
 for _, row in tqdm(seine3.iterrows(), total=len(seine3)):
     geom = row.geometry
     for i, j in zip(geom.coords, geom.coords[1:]):
+        i, j = snap_key(i), snap_key(j)
         G.add_edge(i, j, weight=LineString([i, j]).length)
 
 # %%
 root_node = sites2.loc[sites2["Libellé"] == Root_Name, "geometry"]
-root_node = root_node.squeeze().coords[0]
+root_node = snap_key(root_node.squeeze().coords[0])
 
 site_nodes = []
 
 # Ajout des sites existants comme nœuds du graphe
 for site in sites2.itertuples():
-    coord = site.geometry.coords[0]
+    coord = snap_key(site.geometry.coords[0])
     attrs = G.nodes[coord]
     attrs["site_id"] = site.Index
     attrs["label"] = site.Libellé
@@ -216,14 +221,17 @@ for site in sites2.itertuples():
     site_nodes.append(coord)
 
 # Ajout des stations Hubeau comme nœuds du graphe
-# (coord exacte garantie par la correction unifiée lors du rattachement)
+# (snap_key absorbe les micro-dérives flottantes issues des splits successifs)
 for station in station_hydro.itertuples():
-    coord = station.geometry.coords[0]
+    coord = snap_key(station.geometry.coords[0])
     attrs = G.nodes[coord]
     attrs["site_id"] = station.Index
     attrs["label"] = station.Libellé
     attrs["source"] = "hubeau"
     site_nodes.append(coord)
+
+# %%
+site_nodes
 
 colors = []
 paths = {}
