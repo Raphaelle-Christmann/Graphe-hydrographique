@@ -121,7 +121,7 @@ sites_hubeau = gdf_hubeau[["Libellé", "geometry", "source","libelle_cours_eau"]
 print(f"{len(sites_hubeau)} stations Hubeau retenues sur la Seine, l'Yonne, la Marne, l'Aube, l'Eure, L'Aisne et l'Oise")
 
 # %%
-# Rattachement des sites existants ET des stations Hubeau au réseau
+# Rattachement des sites existants et des stations Hubeau au réseau
 # hydrographique, en un seul traitement unifié : pour chaque point,
 # on cherche le tronçon le plus proche, on projette le point dessus,
 # puis on découpe le tronçon. La coordonnée exacte insérée dans le
