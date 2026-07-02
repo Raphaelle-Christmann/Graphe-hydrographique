@@ -41,21 +41,19 @@ def snap_key(coord, ndigits=6):
     return (round(coord[0], ndigits), round(coord[1], ndigits))
 
 
-
 def dfs(graph, node):
     visited = set((node,))
     dg = nx.DiGraph()
-    stack = [(node,0.)]
+    stack = [(node,0.,node)]
     dg.add_node(node)
-    dg.nodes[node]["site_id"]=graph.nodes[node].get("site_id")
+    dg.nodes[node]["site_id"]=graph.nodes[node]["site_id"]
     dg.nodes[node]["source"]=graph.nodes[node].get("source")
     dg.nodes[node]["libelle_cours_eau"]=graph.nodes[node].get("libelle_cours_eau")
     dg.nodes[node]["dist_exut"] = 0.
     while stack:
-        node,d = stack[-1]
+        node,d,parent = stack.pop()
         if node not in visited:
             visited.add(node)
-        remove_from_stack = True
         for next_node,attrs in graph[node].items():
             if next_node not in visited:
                 dg.add_edge(next_node,node,weight = attrs['weight'])
@@ -83,11 +81,36 @@ sites = gpd.read_file("Sites/Sites.shp").to_crs("EPSG:2154")
 sites2 = sites[~sites.is_empty]
 
 # %%
-G = pickle.load(open('graph.pickle', 'rb'))
 Gc = pickle.load(open('contract.pickle', 'rb'))
 
 root_node = sites2.loc[sites2["Libellé"] == Root_Name, "geometry"]
 root_node = root_node.squeeze().coords[0]
 
+
 OG = dfs(Gc,snap_key(root_node))
+
+
+def debit(graph, s):
+    visited = set((s,))
+    stations = []
+    stack = [s]
+    while stack:
+        node = stack[-1]
+        stack.pop()
+        if node not in visited:
+            visited.add(node)
+        for next_node in graph.predecessors(node):
+            if next_node not in visited:
+                if graph.nodes[next_node].get("source") == "hubeau" :
+                    stations.append(next_node)
+                else :
+                    stack.append(next_node)
+    graph.nodes[s]["debits"] = stations
+
+def debits(graph) :
+    for n in graph.nodes :
+      if graph.nodes[n].get("source") == "sites_existants" :
+        debit(graph,n)
+
+debits(OG)
 pickle.dump(OG, open('ograph.pickle', 'wb'))
