@@ -31,20 +31,25 @@ from tqdm.auto import tqdm
 def dfs(graph, node):
     visited = set((node,))
     dg = nx.DiGraph()
-    stack = [(node,0.,node)]
+    stack = [(node,0.)]
     dg.add_node(node)
     dg.nodes[node]["site_id"]=graph.nodes[node]["site_id"]
     dg.nodes[node]["dist_exut"] = 0.
     while stack:
-        node,d,parent = stack.pop()
+        node,d = stack[-1]
         if node not in visited:
             visited.add(node)
+        remove_from_stack = True
         for next_node,attrs in graph[node].items():
             if next_node not in visited:
                 dg.add_edge(next_node,node,weight = attrs['weight'])
                 dg.nodes[node]["site_id"] = graph.nodes[node].get("site_id")
                 dg.nodes[next_node]["dist_exut"] = d + attrs['weight']
                 stack.append((next_node,dg.nodes[node]["dist_exut"]))
+                remove_from_stack = False
+                break
+        if remove_from_stack:
+            stack.pop()
     return dg
 
 
@@ -60,7 +65,8 @@ sites = gpd.read_file("Sites/Sites.shp").to_crs("EPSG:2154")
 sites2 = sites[~sites.is_empty]
 
 # %%
-Gc = pickle.load(open('../Graphs/G_connexe_contracted.pickle', 'rb'))
+G = pickle.load(open('graph.pickle', 'rb'))
+Gc = pickle.load(open('contract.pickle', 'rb'))
 
 root_node = sites2.loc[sites2["Libellé"] == Root_Name, "geometry"]
 root_node = root_node.squeeze().coords[0]

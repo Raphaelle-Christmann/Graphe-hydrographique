@@ -5,7 +5,7 @@ import networkx as nx
 import pickle
 
 OG = pickle.load(open('ograph.pickle', 'rb'))
-# Récupération des valeurs de dist_exut pour chaque nœud
+# Récupération des valeurs de dist_exut pour chacun des nœuds
 dist_exut_values = [OG.nodes[n].get("dist_exut",0.) for n in OG.nodes()]
 
 pos_contract = {n: n for n in OG.nodes()}
