@@ -12,7 +12,13 @@ pos_contract = {n: n for n in OG.nodes()}
 
 # Couleur différente pour les nœuds correspondant à des stations
 node_colors = [
-    "tab:blue" if OG.nodes[n].get("source")== "hubeau" else "tab:red"
+    "tab:blue" if OG.nodes[n].get("libelle_cours_eau")=="La Seine"
+    else "tab:orange" if OG.nodes[n].get("libelle_cours_eau")=="L'Yonne"
+    else "tab:purple" if OG.nodes[n].get("libelle_cours_eau")=="L'Aube"
+    else "tab:brown" if OG.nodes[n].get("libelle_cours_eau")=="L'Eure"
+    else "tab:cyan" if OG.nodes[n].get("libelle_cours_eau")=="L'Aisne"
+    else "tab:olive" if OG.nodes[n].get("libelle_cours_eau")=="L'Oise"
+      else "tab:red" if OG.nodes[n].get("libelle_cours_eau")=="La Marne" else "tab:green" if OG.nodes[n].get("site_id") is not None else "tab:gray"
     for n in OG.nodes()
 ]
 node_sizes = [

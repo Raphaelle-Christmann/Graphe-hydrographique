@@ -81,6 +81,20 @@ seine['CdCoursEau'].dropna()
 # Chargement des sites (stations) et reprojection en Lambert-93 (EPSG:2154)
 # pour être cohérent avec les données hydrographiques
 sites = gpd.read_file("Sites/Sites.shp").to_crs("EPSG:2154")
+
+riviere_map = {
+    "Seine": "La Seine",
+    "Marne": "La Marne",
+    "Oise": "L'Oise",
+    "Yonne": "L'Yonne",
+    "Aube": "L'Aube",
+    "Eure": "L'Eure",
+    "Aisne": "L'Aisne"
+}
+
+sites["Riviere"] = sites["Riviere"].replace(riviere_map)
+sites = sites.rename(columns={"Riviere": "libelle_cours_eau"})
+
 sites
 
 # %%
@@ -103,7 +117,7 @@ gdf_hubeau = gdf_hubeau.drop_duplicates(subset="code_station")
 gdf_hubeau = gdf_hubeau.rename(columns={"libelle_station": "Libellé"})
 gdf_hubeau["source"] = "hubeau"
 
-sites_hubeau = gdf_hubeau[["Libellé", "geometry", "source"]].reset_index(drop=True).copy()
+sites_hubeau = gdf_hubeau[["Libellé", "geometry", "source","libelle_cours_eau"]].reset_index(drop=True).copy()
 print(f"{len(sites_hubeau)} stations Hubeau retenues sur la Seine, l'Yonne, la Marne, l'Aube, l'Eure, L'Aisne et l'Oise")
 
 # %%
@@ -129,9 +143,9 @@ geom_col_s2 = seine2.columns.get_loc("geometry")
 # de l'origine ("kind") et de l'index d'origine (pour retrouver site_id ensuite)
 points = pd.concat(
     [
-        sites2[["Libellé", "geometry", "source"]]
+        sites2[["Libellé", "geometry", "source", "libelle_cours_eau"]]
             .assign(orig_index=sites2.index, kind="sites_existants"),
-        station_hydro[["Libellé", "geometry", "source"]]
+        station_hydro[["Libellé", "geometry", "source", "libelle_cours_eau"]]
             .assign(orig_index=station_hydro.index, kind="hubeau"),
     ],
     ignore_index=True,
@@ -184,11 +198,11 @@ seine3 = seine2[seine2["TopoOH"].isin(topo)]
 # On resépare sites2 / station_hydro à partir de "points"
 sites2 = (
     points[points["kind"] == "sites_existants"]
-    .set_index("orig_index")[["Libellé", "geometry", "source"]]
+    .set_index("orig_index")[["Libellé", "geometry", "source", "libelle_cours_eau"]]
 )
 station_hydro = (
     points[points["kind"] == "hubeau"]
-    .set_index("orig_index")[["Libellé", "geometry", "source"]]
+    .set_index("orig_index")[["Libellé", "geometry", "source", "libelle_cours_eau"]]
 )
 
 seine3
@@ -217,6 +231,7 @@ for site in sites2.itertuples():
     attrs = G.nodes[coord]
     attrs["site_id"] = site.Index
     attrs["label"] = site.Libellé
+    attrs["libelle_cours_eau"] = site.libelle_cours_eau
     attrs["source"] = "sites_existants"
     site_nodes.append(coord)
 
@@ -227,6 +242,7 @@ for station in station_hydro.itertuples():
     attrs = G.nodes[coord]
     attrs["site_id"] = station.Index
     attrs["label"] = station.Libellé
+    attrs["libelle_cours_eau"] = station.libelle_cours_eau
     attrs["source"] = "hubeau"
     site_nodes.append(coord)
 
