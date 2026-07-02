@@ -56,16 +56,15 @@ def dfs(graph, node):
             visited.add(node)
         for next_node,attrs in graph[node].items():
             if next_node not in visited:
-                dg.add_edge(next_node,node,weight = attrs['weight'])
-                dg.nodes[next_node]["site_id"] = graph.nodes[next_node].get("site_id")
-                dg.nodes[next_node]["source"] = graph.nodes[next_node].get("source")
-                dg.nodes[next_node]["libelle_cours_eau"] = graph.nodes[next_node].get("libelle_cours_eau")
-                dg.nodes[next_node]["dist_exut"] = d + attrs['weight']
-                stack.append((next_node,dg.nodes[node]["dist_exut"]))
-                remove_from_stack = False
-                break
-        if remove_from_stack:
-            stack.pop()
+                if graph.nodes[next_node].get("site_id") is not None :
+                    dg.add_edge(next_node,parent,weight = d + attrs["weight"])
+                    dg.nodes[next_node]["site_id"] = graph.nodes[next_node].get("site_id")
+                    dg.nodes[next_node]["source"] = graph.nodes[next_node].get("source")
+                    dg.nodes[next_node]["libelle_cours_eau"] = graph.nodes[next_node].get("libelle_cours_eau")
+                    dg.nodes[next_node]["dist_exut"] = d + dg.nodes[parent].get("dist_exut")
+                    stack.append((next_node,0.,next_node))
+                else :
+                    stack.append((next_node,d+attrs["weight"],parent))
     return dg
 
 
