@@ -14,30 +14,15 @@
 # ---
 
 # %%
+
+#NECESSITE LA PRESENCE DU GRAPHE CONTRACTÉ
+
+
 import pickle
-import pathlib
-import pandas as pd
 import geopandas as gpd
-import numpy as np
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pyproj
 import networkx as nx
-from shapely import Point, LineString, MultiLineString, GeometryCollection, box
-from shapely.ops import split, snap, linemerge
-from tqdm.auto import tqdm
 
 def snap_key(coord, ndigits=6):
-    """
-    Arrondit une coordonnée (x, y) à `ndigits` décimales, pour l'utiliser
-    comme clé de nœud stable dans le graphe. En Lambert-93 (EPSG:2154),
-    les coordonnées sont exprimées en mètres : 6 décimales correspond donc
-    à une précision de l'ordre du micromètre, largement suffisante pour
-    absorber les micro-dérives flottantes introduites par des opérations
-    géométriques successives (snap/split/linemerge) sans jamais confondre
-    deux vertices réellement distincts.
-    """
     return (round(coord[0], ndigits), round(coord[1], ndigits))
 
 
@@ -68,6 +53,31 @@ def dfs(graph, node):
     return dg
 
 
+def debit(graph, s):
+    visited = set((s,))
+    stations = []
+    stack = [s]
+    if graph.nodes[s].get("source") == "hubeau" :
+        graph.nodes[s]["debits"] = [s]
+        return
+    while stack:
+        node = stack[-1]
+        stack.pop()
+        if node not in visited:
+            visited.add(node)
+        for next_node in graph.predecessors(node):
+            if next_node not in visited:
+                if graph.nodes[next_node].get("source") == "hubeau" :
+                    stations.append(next_node)
+                else :
+                    stack.append(next_node)
+    graph.nodes[s]["debits"] = stations
+
+def debits(graph) :
+    for n in graph.nodes :
+      if graph.nodes[n].get("source") == "sites_existants" :
+        debit(graph,n)
+
 
 # Bassin de la seine
 Seine_Code = "03C00000020008"
@@ -88,28 +98,6 @@ root_node = root_node.squeeze().coords[0]
 
 OG = dfs(Gc,snap_key(root_node))
 
-
-def debit(graph, s):
-    visited = set((s,))
-    stations = []
-    stack = [s]
-    while stack:
-        node = stack[-1]
-        stack.pop()
-        if node not in visited:
-            visited.add(node)
-        for next_node in graph.predecessors(node):
-            if next_node not in visited:
-                if graph.nodes[next_node].get("source") == "hubeau" :
-                    stations.append(next_node)
-                else :
-                    stack.append(next_node)
-    graph.nodes[s]["debits"] = stations
-
-def debits(graph) :
-    for n in graph.nodes :
-      if graph.nodes[n].get("source") == "sites_existants" :
-        debit(graph,n)
 
 debits(OG)
 pickle.dump(OG, open('ograph.pickle', 'wb'))
