@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import pickle
 
-OG = pickle.load(open('ograph.pickle', 'rb'))
+OG = pickle.load(open('../Graphs/G_oriented.pickle', 'rb'))
 
 # %%
 # Affichage avec les positions géographiques réelles (centroïdes des tronçons)
