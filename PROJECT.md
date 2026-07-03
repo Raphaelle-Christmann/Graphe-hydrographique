@@ -11,4 +11,6 @@ A noter que le calcul de cette fusion prend un temps relativement important mais
 En effet G_connexe_non_contracted.pickle contient l'entiéreté des informations des bases de données et n'est généré qu'une fois.
 Le graphe plus lisible et manipulable plus rapidement (G_oriented_par_tr.pickle) que nous calculons ne contient comme sommets que les différents sites de mesures, et peut permettre rapidement à l'utilisateurices de calculer de nouvelles informations.
 
-La visualisation de l'ensemble de ces informations peut être obtenue rapidement en lançant visu_oriented.py
+La visualisation de l'ensemble de ces informations peut être obtenue rapidement en lançant visu_oriented.py.
+
+Avec du recul, il serait probablement plus pertinent d'indexer les noeuds du graphe avec des coordonnées entières, quitte à introduire une table de correspondance. Ceci permet d'éviter le problème d'arrondi lors de la construction du graphe, mais il faudrait alors réaliser le même traitement pour les nouvelles stations si on souhaite en ajouter.
