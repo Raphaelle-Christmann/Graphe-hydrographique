@@ -60,22 +60,22 @@ def debit(graph, s):
     if graph.nodes[s].get("source") == "hubeau" :
         graph.nodes[s]["debits"] = [s]
         return
-    while stack:
-        node = stack[-1]
-        stack.pop()
-        if node not in visited:
-            visited.add(node)
-        for next_node in graph.predecessors(node):
-            if next_node not in visited:
-                if graph.nodes[next_node].get("source") == "hubeau" :
-                    stations.append(next_node)
-                else :
-                    stack.append(next_node)
-    graph.nodes[s]["debits"] = stations
+    else :
+        while stack:
+            node = stack[-1]
+            stack.pop()
+            if node not in visited:
+                visited.add(node)
+            for next_node in graph.predecessors(node):
+                if next_node not in visited:
+                    if graph.nodes[next_node].get("source") == "hubeau" :
+                        stations.append(next_node)
+                    else :
+                        stack.append(next_node)
+        graph.nodes[s]["debits"] = stations
 
 def debits(graph) :
     for n in graph.nodes :
-      if graph.nodes[n].get("source") == "sites_existants" :
         debit(graph,n)
 
 
