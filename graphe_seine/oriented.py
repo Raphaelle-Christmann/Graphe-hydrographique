@@ -90,7 +90,8 @@ sites = gpd.read_file("Sites/Sites.shp").to_crs("EPSG:2154")
 sites2 = sites[~sites.is_empty]
 
 # %%
-Gc = pickle.load(open('contract.pickle', 'rb'))
+# Gc = pickle.load(open('contract.pickle', 'rb'))
+Gc = pickle.load(open('../Graphs/G_connexe_contracted.pickle', 'rb'))
 
 root_node = sites2.loc[sites2["Libellé"] == Root_Name, "geometry"]
 root_node = root_node.squeeze().coords[0]
@@ -100,4 +101,7 @@ OG = dfs(Gc,snap_key(root_node))
 
 
 debits(OG)
-pickle.dump(OG, open('ograph.pickle', 'wb'))
+
+# pickle.dump(OG, open('ograph.pickle', 'wb'))
+pickle.dump(OG, open('../Graphs/G_oriented.pickle', 'wb'))
+

@@ -4,7 +4,7 @@ import matplotlib.colors as mcolors
 import networkx as nx
 import pickle
 
-OG = pickle.load(open('ograph.pickle', 'rb'))
+OG = pickle.load(open('../Graphs/G_oriented.pickle', 'rb'))
 # Récupération des valeurs de dist_exut pour chacun des nœuds
 dist_exut_values = [OG.nodes[n].get("dist_exut",0.) for n in OG.nodes()]
 
